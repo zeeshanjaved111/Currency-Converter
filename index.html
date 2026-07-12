@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Glass Currency Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg: #e8f1f8;
+            --circle: #5ca9f7;
+            --calc-bg: rgba(255, 255, 255, 0.45);
+            --calc-border: rgba(255, 255, 255, 0.6);
+            --calc-shadow: 0 25px 60px rgba(31, 38, 135, 0.2);
+            --display-text: #1e293b;
+            --expression-text: #64748b;
+            --btn-bg: rgba(255, 255, 255, 0.7);
+            --btn-text: #1e293b;
+            --btn-hover: rgba(255, 255, 255, 1);
+            --btn-convert-bg: #3b82f6;
+            --btn-convert-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+            --input-bg: rgba(255, 255, 255, 0.6);
+            --input-border: rgba(255, 255, 255, 0.8);
+            --dropdown-bg: rgba(255, 255, 255, 0.95);
+            --dropdown-hover: rgba(59, 130, 246, 0.1);
+        }
+
+        body.dark {
+            --bg: #0f172a;
+            --circle: #1e40af;
+            --calc-bg: rgba(15, 23, 42, 0.45);
+            --calc-border: rgba(255, 255, 255, 0.1);
+            --calc-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            --display-text: #f1f5f9;
+            --expression-text: #94a3b8;
+            --btn-bg: rgba(30, 41, 59, 0.7);
+            --btn-text: #f1f5f9;
+            --btn-hover: rgba(51, 65, 85, 1);
+            --btn-convert-bg: #2563eb;
+            --btn-convert-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+            --input-bg: rgba(30, 41, 59, 0.6);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --dropdown-bg: rgba(30, 41, 59, 0.95);
+            --dropdown-hover: rgba(59, 130, 246, 0.2);
+        }
+
+        body {
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            transition: all 0.4s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bg-shape {
+            position: fixed;
+            width: min(450px, 90vw);
+            height: min(450px, 90vw);
+            background: var(--circle);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            filter: blur(2px);
+            animation: float 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -52%) scale(1.05); }
+        }
+
+        .top-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: var(--calc-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .converter {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 380px;
+            background: var(--calc-bg);
+            border: 1.5px solid var(--calc-border);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-radius: 40px;
+            box-shadow: var(--calc-shadow);
+            padding: 24px 20px;
+            transition: all 0.4s ease;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .title h2 {
+            color: var(--display-text);
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .last-update {
+            font-size: 12px;
+            color: var(--expression-text);
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-label {
+            font-size: 13px;
+            color: var(--expression-text);
+            margin-bottom: 8px;
+            display: block;
+            font-weight: 500;
+        }
+
+        .amount-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--input-border);
+            border-radius: 18px;
+            background: var(--input-bg);
+            backdrop-filter: blur(10px);
+            color: var(--display-text);
+            font-size: 20px;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .amount-input:focus {
+            border-color: #3b82f6;
+            background: var(--btn-hover);
+        }
+
+        .currency-select-wrapper {
+            position: relative;
+        }
+
+        .currency-display {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--input-border);
+            border-radius: 18px;
+            background: var(--input-bg);
+            backdrop-filter: blur(10px);
+            color: var(--display-text);
+            font-size: 16px;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .currency-display:hover, .currency-display.active {
+            border-color: #3b82f6;
+        }
+
+        .dropdown-arrow {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .currency-display.active .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: var(--dropdown-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1.5px solid var(--calc-border);
+            border-radius: 18px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            max-height: 280px;
+            overflow: hidden;
+            display: none;
+            z-index: 1000;
+        }
+
+        .dropdown-menu.active {
+            display: block;
+        }
+
+        .search-box {
+            padding: 12px;
+            border-bottom: 1px solid var(--calc-border);
+            position: sticky;
+            top: 0;
+            background: var(--dropdown-bg);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: var(--display-text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #3b82f6;
+        }
+
+        .currency-list {
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .currency-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--display-text);
+            font-size: 15px;
+        }
+
+        .currency-item:hover {
+            background: var(--dropdown-hover);
+        }
+
+        .currency-item.selected {
+            background: rgba(59, 130, 246, 0.15);
+            font-weight: 600;
+        }
+
+        .swap-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid var(--input-border);
+            background: var(--btn-bg);
+            backdrop-filter: blur(10px);
+            margin: 12px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 22px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .swap-btn:active {
+            transform: rotate(180deg) scale(0.95);
+        }
+
+        .result-box {
+            background: var(--input-bg);
+            border: 2px solid var(--input-border);
+            border-radius: 18px;
+            padding: 16px;
+            margin: 16px 0;
+            text-align: center;
+        }
+
+        .result-amount {
+            font-size: 30px;
+            font-weight: 600;
+            color: var(--display-text);
+            margin-bottom: 5px;
+            word-wrap: break-word;
+        }
+
+        .result-rate {
+            font-size: 13px;
+            color: var(--expression-text);
+        }
+
+        .convert-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 18px;
+            background: var(--btn-convert-bg);
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: var(--btn-convert-shadow);
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .convert-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* ================= RESPONSIVE ================= */
+        @media (max-width: 480px) {
+            .converter {
+                padding: 20px 18px;
+                border-radius: 32px;
+            }
+            .result-amount {
+                font-size: 26px;
+            }
+            .amount-input, .currency-display {
+                padding: 13px;
+                font-size: 18px;
+            }
+            .convert-btn {
+                padding: 14px;
+                font-size: 17px;
+            }
+        }
+
+        @media (min-width: 481px) and (max-width: 768px) {
+            .converter {
+                max-width: 420px;
+                padding: 28px 24px;
+            }
+            .result-amount {
+                font-size: 32px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .converter {
+                max-width: 400px;
+                padding: 32px 26px;
+            }
+            .result-amount {
+                font-size: 34px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-shape"></div>
+  
+    <div class="top-controls">
+        <button class="control-btn" onclick="toggleTheme()" title="Theme">🌙</button>
+        <button class="control-btn" onclick="showHistory()" title="History">📜</button>
+    </div>
+  
+    <div class="converter">
+        <div class="title">
+            <h2>💱 Currency Converter</h2>
+            <div class="last-update" id="lastUpdate">Loading rates...</div>
+        </div>
+        <div class="input-group">
+            <label class="input-label">Amount</label>
+            <input type="number" class="amount-input" id="amount" value="1" min="0" step="any">
+        </div>
+        <div class="input-group">
+            <label class="input-label">From</label>
+            <div class="currency-select-wrapper">
+                <div class="currency-display" id="fromDisplay" onclick="toggleDropdown('from')">
+                    <span id="fromText">USD</span>
+                    <span class="dropdown-arrow">▼</span>
+                </div>
+                <div class="dropdown-menu" id="fromDropdown">
+                    <div class="search-box">
+                        <input type="text" class="search-input" id="fromSearch" placeholder="Search currency..." onkeyup="filterCurrencies('from')">
+                    </div>
+                    <div class="currency-list" id="fromList"></div>
+                </div>
+            </div>
+        </div>
+        <button class="swap-btn" onclick="swapCurrencies()">⇅</button>
+        <div class="input-group">
+            <label class="input-label">To</label>
+            <div class="currency-select-wrapper">
+                <div class="currency-display" id="toDisplay" onclick="toggleDropdown('to')">
+                    <span id="toText">PKR</span>
+                    <span class="dropdown-arrow">▼</span>
+                </div>
+                <div class="dropdown-menu" id="toDropdown">
+                    <div class="search-box">
+                        <input type="text" class="search-input" id="toSearch" placeholder="Search currency..." onkeyup="filterCurrencies('to')">
+                    </div>
+                    <div class="currency-list" id="toList"></div>
+                </div>
+            </div>
+        </div>
+        <div class="result-box">
+            <div class="result-amount" id="result">0</div>
+            <div class="result-rate" id="rateInfo">1 USD = 0 PKR</div>
+        </div>
+        <button class="convert-btn" onclick="convert()" id="convertBtn">Convert</button>
+    </div>
+
+    <script>
+        // ... (Script same rakha hai, koi change nahi kiya)
+        const API_URL = 'https://api.exchangerate-api.com/v4/latest/USD';
+        let rates = {};
+        let currencies = [];
+        let history = JSON.parse(localStorage.getItem('convertHistory')) || [];
+        let selectedFrom = 'USD';
+        let selectedTo = 'PKR';
+        let activeDropdown = null;
+
+        const amountInput = document.getElementById('amount');
+        const resultEl = document.getElementById('result');
+        const rateInfo = document.getElementById('rateInfo');
+        const lastUpdate = document.getElementById('lastUpdate');
+        const convertBtn = document.getElementById('convertBtn');
+        const body = document.body;
+
+        const currencyNames = {
+            USD: 'United States Dollar', EUR: 'Euro', GBP: 'British Pound', PKR: 'Pakistani Rupee',
+            INR: 'Indian Rupee', AED: 'UAE Dirham', SAR: 'Saudi Riyal', JPY: 'Japanese Yen',
+            CNY: 'Chinese Yuan', AUD: 'Australian Dollar', CAD: 'Canadian Dollar', CHF: 'Swiss Franc',
+            NZD: 'New Zealand Dollar', SGD: 'Singapore Dollar', HKD: 'Hong Kong Dollar', KRW: 'South Korean Won',
+            THB: 'Thai Baht', MYR: 'Malaysian Ringgit', IDR: 'Indonesian Rupiah', PHP: 'Philippine Peso',
+            TRY: 'Turkish Lira', BRL: 'Brazilian Real', MXN: 'Mexican Peso', ZAR: 'South African Rand',
+            RUB: 'Russian Ruble', NGN: 'Nigerian Naira', EGP: 'Egyptian Pound', KES: 'Kenyan Shilling'
+        };
+
+        async function loadRates() {
+            try {
+                convertBtn.disabled = true;
+                convertBtn.textContent = 'Loading...';
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                rates = data.rates;
+                currencies = Object.keys(rates).sort();
+                populateCurrencies();
+                lastUpdate.textContent = `Updated: ${new Date().toLocaleString()}`;
+                convertBtn.disabled = false;
+                convertBtn.textContent = 'Convert';
+                convert();
+            } catch (error) {
+                rates = { USD: 1, EUR: 0.92, GBP: 0.79, PKR: 278.5, INR: 83.2, AED: 3.67, SAR: 3.75, JPY: 149.5, CNY: 7.24, AUD: 1.52, CAD: 1.36, CHF: 0.88, NZD: 1.63, SGD: 1.34, HKD: 7.82, KRW: 1330, THB: 35.8, MYR: 4.72, IDR: 15650, PHP: 56.5 };
+                currencies = Object.keys(rates).sort();
+                populateCurrencies();
+                lastUpdate.textContent = 'Using offline rates';
+                convertBtn.disabled = false;
+                convertBtn.textContent = 'Convert';
+                convert();
+            }
+        }
+
+        function populateCurrencies() {
+            renderCurrencyList('from');
+            renderCurrencyList('to');
+            document.getElementById('fromText').textContent = selectedFrom;
+            document.getElementById('toText').textContent = selectedTo;
+        }
+
+        function renderCurrencyList(type, filter = '') {
+            const listEl = document.getElementById(type + 'List');
+            const filtered = currencies.filter(c => {
+                const name = currencyNames[c] || '';
+                return c.toLowerCase().includes(filter.toLowerCase()) || name.toLowerCase().includes(filter.toLowerCase());
+            });
+            listEl.innerHTML = filtered.map(c => {
+                const selected = type === 'from'? selectedFrom : selectedTo;
+                const name = currencyNames[c] || c;
+                return `<div class="currency-item ${c === selected? 'selected' : ''}" onclick="selectCurrency('${type}', '${c}')">${c} - ${name}</div>`;
+            }).join('');
+        }
+
+        function toggleDropdown(type) {
+            const dropdown = document.getElementById(type + 'Dropdown');
+            const display = document.getElementById(type + 'Display');
+            if (activeDropdown === type) {
+                dropdown.classList.remove('active');
+                display.classList.remove('active');
+                activeDropdown = null;
+            } else {
+                document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('active'));
+                document.querySelectorAll('.currency-display').forEach(d => d.classList.remove('active'));
+                dropdown.classList.add('active');
+                display.classList.add('active');
+                activeDropdown = type;
+                document.getElementById(type + 'Search').focus();
+            }
+        }
+
+        function selectCurrency(type, currency) {
+            if (type === 'from') {
+                selectedFrom = currency;
+                document.getElementById('fromText').textContent = currency;
+            } else {
+                selectedTo = currency;
+                document.getElementById('toText').textContent = currency;
+            }
+            toggleDropdown(type);
+            convert();
+        }
+
+        function filterCurrencies(type) {
+            const search = document.getElementById(type + 'Search').value;
+            renderCurrencyList(type, search);
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.currency-select-wrapper')) {
+                document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('active'));
+                document.querySelectorAll('.currency-display').forEach(d => d.classList.remove('active'));
+                activeDropdown = null;
+            }
+        });
+
+        function convert() {
+            const amount = parseFloat(amountInput.value) || 0;
+            if (!rates[selectedFrom] ||!rates[selectedTo]) return;
+            const usdAmount = amount / rates[selectedFrom];
+            const converted = usdAmount * rates[selectedTo];
+            const rate = rates[selectedTo] / rates[selectedFrom];
+            resultEl.textContent = formatNumber(converted) + ' ' + selectedTo;
+            rateInfo.textContent = `1 ${selectedFrom} = ${rate.toFixed(4)} ${selectedTo}`;
+            addToHistory(amount, selectedFrom, converted, selectedTo);
+        }
+
+        function formatNumber(num) {
+            return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(num);
+        }
+
+        function swapCurrencies() {
+            const temp = selectedFrom;
+            selectedFrom = selectedTo;
+            selectedTo = temp;
+            document.getElementById('fromText').textContent = selectedFrom;
+            document.getElementById('toText').textContent = selectedTo;
+            renderCurrencyList('from');
+            renderCurrencyList('to');
+            convert();
+        }
+
+        function addToHistory(amount, from, result, to) {
+            const item = { amount, from, result, to, time: new Date().toLocaleTimeString() };
+            history.unshift(item);
+            if (history.length > 5) history.pop();
+            localStorage.setItem('convertHistory', JSON.stringify(history));
+        }
+
+        function renderHistory() {
+            if (history.length === 0) return "No history yet.";
+            return history.map(item => 
+                `${item.time} - ${formatNumber(item.amount)} ${item.from} → ${formatNumber(item.result)} ${item.to}`
+            ).join('\n\n');
+        }
+
+        function showHistory() {
+            const hist = renderHistory();
+            alert("Recent Conversions:\n\n" + hist);
+        }
+
+        function toggleTheme() {
+            body.classList.toggle('dark');
+            const btns = document.querySelectorAll('.control-btn');
+            btns.forEach(btn => {
+                if (btn.textContent === '🌙' || btn.textContent === '☀') {
+                    btn.textContent = body.classList.contains('dark') ? '☀' : '🌙';
+                }
+            });
+        }
+
+        amountInput.addEventListener('input', convert);
+        loadRates();
+    </script>
+</body>
+</html>
